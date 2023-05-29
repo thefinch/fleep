@@ -6,7 +6,7 @@ var current_side = 'top'
 var mouse_over = false
 
 # related to dragging and dropping
-var draggable = false
+var draggable = true
 var being_dragged = false
 var original_position = null
 
@@ -180,54 +180,60 @@ func transpose(arrows, direction):
 	return new_arrows
 
 func _input(event):
-	if draggable and mouse_over:
-		# check if we need to stop dragging
-		var stopped = being_dragged \
-			and event is InputEventMouseButton \
-			and not event.is_pressed()
-		if stopped:
-			print('stopping')
-			end_drag()
-			return
+	# only process input if needed
+	if not draggable or not mouse_over:
+		return
 		
-		# check if we need to start dragging
-		var started = event is InputEventMouseButton \
-			and event.is_pressed() \
-			and event.button_index == MOUSE_BUTTON_LEFT 
-		if started:
-			pick_up()
-			return
-			
-		# check if we need to rotate
-		var rotate = event is InputEventMouseButton \
-			and event.is_pressed() \
-			and event.button_index == MOUSE_BUTTON_RIGHT 
-		if rotate:
-			spin('clockwise')
-			return
-			
-		# check if we need to flip the tile
-		var flip = event is InputEventMouseButton \
-			and event.is_pressed() \
-			and (event.button_index == MOUSE_BUTTON_WHEEL_UP or event.button_index == MOUSE_BUTTON_WHEEL_DOWN)
-		if flip:
-			var direction = 'forward' if event.button_index == MOUSE_BUTTON_WHEEL_UP else 'backward'
-			spin(direction)
-			return
-			
-		# check if we need to continue dragging
-		var continued = event is InputEventMouseMotion and being_dragged
-		if continued:
-			drag(event)
-			return
+	# check if we need to stop dragging
+	var stopped = being_dragged \
+		and event is InputEventMouseButton \
+		and not event.is_pressed()
+	if stopped:
+		print('stopping')
+		end_drag()
+		return
 	
+	# check if we need to start dragging
+	var started = event is InputEventMouseButton \
+		and event.is_pressed() \
+		and event.button_index == MOUSE_BUTTON_LEFT 
+	if started:
+		pick_up()
+		return
+		
+	# check if we need to rotate
+	var rotate = event is InputEventMouseButton \
+		and event.is_pressed() \
+		and event.button_index == MOUSE_BUTTON_RIGHT 
+	if rotate:
+		spin('clockwise')
+		return
+		
+	# check if we need to flip the tile
+	var flip = event is InputEventMouseButton \
+		and event.is_pressed() \
+		and (event.button_index == MOUSE_BUTTON_WHEEL_UP or event.button_index == MOUSE_BUTTON_WHEEL_DOWN)
+	if flip:
+		var direction = 'forward' if event.button_index == MOUSE_BUTTON_WHEEL_UP else 'backward'
+		spin(direction)
+		return
+		
+	# check if we need to continue dragging
+	var continued = event is InputEventMouseMotion and being_dragged
+	if continued:
+		drag(event)
+		return
+	
+# begin dragging the tile
 func pick_up():
-	original_position = self.translation
+	original_position = self.global_position
 	being_dragged = true
 	
-func drag(event):
+func drag(event):	
+	# @todo this part isn't working right now
+	# make the top face of the tile always look at the camera
 	var distance_from_camera = 7
-	var camera = get_parent().get_node('Camera')
+	var camera = get_viewport().get_camera_3d()
 	var from = camera.project_ray_origin(event.position)
 	var to = from + camera.project_ray_normal(event.position) * distance_from_camera
 	#global_transform.origin = to
@@ -246,7 +252,7 @@ func end_drag():
 		# send back to original location
 		var duration = 0.3
 		var tween = create_tween().set_parallel(true)
-		tween.tween_property(self, "translation", original_position, duration)
+		tween.tween_property(self, "global_position", original_position, duration)
 
 func _on_Area_mouse_entered():
 	mouse_over = true
