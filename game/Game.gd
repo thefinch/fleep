@@ -18,21 +18,23 @@ var tile_scene = preload('res://tile/Tile.tscn')
 
 # called when the node enters the scene tree for the first time
 func _ready():
+	randomize()
 	setup_players()
 
 # figures out where to position the tile in the given player's hand
 func get_tile_position_in_hand(player_number, tile_number):
 	var x_offset = 0
 	var offset = 8
+	var multiplier = 3
 	match(tile_number):
 		0:
-			x_offset = -2 * offset
+			x_offset = -multiplier * offset
 		1:
 			x_offset = -offset
 		3:
 			x_offset = offset
 		4:
-			x_offset = 2 * offset
+			x_offset = multiplier * offset
 
 	var y_offset = -25
 	if player_number == 2:
@@ -41,14 +43,15 @@ func get_tile_position_in_hand(player_number, tile_number):
 	return Vector3(
 		x_offset,
 		y_offset,
-		0
+		x_offset
 	)
 
 # creates a tile and adds it to the given player's hand
 func add_tile(player_hand, player_number, tile_number):
 	# create the tile and add it to the player's hand array
 	var new_tile = tile_scene.instantiate()
-	new_tile.scale = Vector3(0.2, 0.2, 0.2)
+	var scale = 0.003
+	new_tile.scale = Vector3(scale, scale, scale)
 	player_hand.append(new_tile)
 	
 	# put the tile where it needs to be in the player's hand on the screen
@@ -67,10 +70,11 @@ func setup_players():
 	player1 = []
 	player2 = []
 
+	tiles_per_hand = 1
 	# create our tiles
 	for tile_number in range(0, tiles_per_hand):
 		add_tile(player1, 1, tile_number)
-		add_tile(player2, 2, tile_number)
+#		add_tile(player2, 2, tile_number)
 
 # gets the board position pointed to by an arrow located at the given position
 func get_coordinate_from_arrow(arrow, position):
@@ -276,3 +280,15 @@ func play():
 		
 		# get the empty spots again
 		open = board.get_empty_spots()
+
+func _input(event):
+	var tile = get_selected_tile()
+	if not tile:
+		return
+	
+	tile.check_rotate(event)
+
+# gets the currently selected tile if there is one
+func get_selected_tile():
+	var tile = player1[0]
+	return tile

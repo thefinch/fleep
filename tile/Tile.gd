@@ -1,22 +1,32 @@
-extends Node
+extends Node3D
 
 var top
 var bottom
 var current_side = 'top'
 var mouse_over = false
 
-# related to dragging and dropping
+# keep track of how this tile can move
 var draggable = true
 var being_dragged = false
 var original_position = null
+var can_rotate = true
 
 # Called when the node enters the scene tree for the first time.
-func _ready():
-	randomize()
+func _ready():	
+	# create the tile sides
 	top = create_tile_side()
-	bottom = create_tile_side()	
+	bottom = create_tile_side()
+	
+	# show the arrows based on what we made
+	show_arrows(top, 'Front')
+	show_arrows(bottom, 'Back')
 		
-func create_tile_side():
+func show_arrows(directions, side):
+	for direction in directions:
+		get_node(side + '/' + direction).visible = true
+
+# generates a random list of arrows for a side
+func create_tile_side():	
 	# set all the possible places an arrow can go
 	var possible_directions = [
 		'UL', 'U', 'UR',
@@ -41,9 +51,6 @@ func create_tile_side():
 	arrows.append(
 		possible_directions[randi() % possible_directions.size()]
 	)
-
-	# randomly add a second arrow
-	#if randi() % 100 > 50:
 	
 	# remove impossible adjacent arrows
 	for removal in removals[arrows[0]]:
@@ -65,34 +72,82 @@ func get_current_side():
 func set_current_side(new_side):
 	current_side = new_side
 
-func spin(direction):
-	match(direction):
-		'forward':
-			print('spinning forward')
-			spin_x(180)
-			
-		'backward':
-			print('spinning backward')
-			spin_x(-180)
-			
-		'clockwise':
-			print('spinning clockwise')
-			spin_z(90)
-			
-		'counterclockwise':
-			print('spinning clockwise')
-			spin_z(-90)
-			
-func spin_x(degrees):
-	var duration = 0.5
-	var tween = create_tween().set_parallel(true)
-	#var new_rotation = global_transform
-	#new_rotation.basis = new_rotation.basis.rotated(Vector3(1, 0, 0), degrees)
-#	new_rotation.basis = new_rotation.basis.rotated(Vector3(0, 1, 0), degrees)
-	#tween.tween_property(self, "transform", new_rotation, duration)
+# check if we need to rotate
+# if so, do so
+func check_rotate(event):
+	var keys_and_actions = [
+		{
+			'key': KEY_KP_9,
+			'axis': 'z',
+			'degrees': -90
+		},
+		{
+			'key': KEY_KP_7,
+			'axis': 'z',
+			'degrees': 90
+		},
+		{
+			'key': KEY_KP_8,
+			'axis': 'x',
+			'degrees': -180
+		},
+		{
+			'key': KEY_KP_2,
+			'axis': 'x',
+			'degrees': 180
+		},
+		{
+			'key': KEY_KP_4,
+			'axis': 'y',
+			'degrees': -180
+		},
+		{
+			'key': KEY_KP_6,
+			'axis': 'y',
+			'degrees': 180
+		}
+	]
+	for set in keys_and_actions:
+		if event is InputEventKey  \
+			and event.pressed \
+			and event.keycode == set.key:
+				rotate_tile(set.axis, set.degrees)
+var flip_factor = 1
+
+# rotates a tile a certain amount of degrees on the given axis
+func rotate_tile(axis, degrees):
+	# don't try to rotate if we're already rotating
+	if not can_rotate:
+		return 
+	can_rotate = false
 	
-func spin_z(degrees):
-	pass
+	# flip rotations if needed
+	match axis:
+		'x', 'y':
+			flip_factor = flip_factor * -1
+	
+	# figure out how much to rotate and how long the rotation should last
+	var start_rotation
+	match axis:
+		'x':
+			start_rotation = self.rotation.x
+		'y':
+			start_rotation = self.rotation.y
+		'z':
+			degrees = degrees * flip_factor
+			start_rotation = self.rotation.z
+	var radians = start_rotation + deg_to_rad(degrees)
+	var duration = 0.3
+			
+	# make it pretty
+	var tween = create_tween()
+	tween.set_trans(Tween.TRANS_QUAD)
+	tween.set_ease(Tween.EASE_OUT)
+	tween.tween_property(self, "rotation:" + axis, radians, duration)
+
+	# allow rotation after this one is done
+	await(tween.finished)
+	can_rotate = true
 
 func reflect(arrows, direction):
 	var new_arrows = []
@@ -179,50 +234,56 @@ func transpose(arrows, direction):
 
 	return new_arrows
 
-func _input(event):
-	# only process input if needed
-	if not draggable or not mouse_over:
-		return
-		
-	# check if we need to stop dragging
-	var stopped = being_dragged \
-		and event is InputEventMouseButton \
-		and not event.is_pressed()
-	if stopped:
-		print('stopping')
-		end_drag()
-		return
-	
-	# check if we need to start dragging
-	var started = event is InputEventMouseButton \
-		and event.is_pressed() \
-		and event.button_index == MOUSE_BUTTON_LEFT 
-	if started:
-		pick_up()
-		return
-		
-	# check if we need to rotate
-	var rotate = event is InputEventMouseButton \
-		and event.is_pressed() \
-		and event.button_index == MOUSE_BUTTON_RIGHT 
-	if rotate:
-		spin('clockwise')
-		return
-		
-	# check if we need to flip the tile
-	var flip = event is InputEventMouseButton \
-		and event.is_pressed() \
-		and (event.button_index == MOUSE_BUTTON_WHEEL_UP or event.button_index == MOUSE_BUTTON_WHEEL_DOWN)
-	if flip:
-		var direction = 'forward' if event.button_index == MOUSE_BUTTON_WHEEL_UP else 'backward'
-		spin(direction)
-		return
-		
-	# check if we need to continue dragging
-	var continued = event is InputEventMouseMotion and being_dragged
-	if continued:
-		drag(event)
-		return
+#func _input(event):
+#	# only process input if needed
+#	if not draggable \
+#		or not mouse_over:
+#		return
+#
+#	# check if we need to stop dragging
+#	var stopped = being_dragged \
+#		and event is InputEventMouseButton \
+#		and not event.is_pressed()
+#	if stopped:
+#		print('stopping drag')
+#		end_drag()
+#		return
+#
+#	# check if we need to start dragging
+#	var started = event is InputEventMouseButton \
+#		and event.is_pressed() \
+#		and event.button_index == MOUSE_BUTTON_LEFT 
+#	if started:
+#		print('picked up')
+#		pick_up()
+#		return
+#
+#	# check if we need to rotate
+#	var rotate = event is InputEventMouseButton \
+#		and event.is_pressed() \
+#		and event.button_index == MOUSE_BUTTON_RIGHT 
+#	if rotate:
+#		print('spinning clockwise')
+#		spin('clockwise')
+#		return
+#
+#	# check if we need to flip the tile
+#	var flip = event is InputEventMouseButton \
+#		and event.is_pressed() \
+#		and (event.button_index == MOUSE_BUTTON_WHEEL_UP or event.button_index == MOUSE_BUTTON_WHEEL_DOWN)
+#	if flip:
+#		var direction = 'forward' if event.button_index == MOUSE_BUTTON_WHEEL_UP else 'backward'
+#		print('spinning ' + direction)
+#		spin(direction)
+#		return
+#
+#	# check if we need to continue dragging
+#	var continued = event is InputEventMouseMotion \
+#					and being_dragged
+#	if continued:
+#		print('dragging')
+#		drag(event)
+#		return
 	
 # begin dragging the tile
 func pick_up():
@@ -236,7 +297,7 @@ func drag(event):
 	var camera = get_viewport().get_camera_3d()
 	var from = camera.project_ray_origin(event.position)
 	var to = from + camera.project_ray_normal(event.position) * distance_from_camera
-	#global_transform.origin = to
+	global_transform.origin = to
 
 func end_drag():	
 	# stop allowing this to be dragged around
@@ -254,8 +315,10 @@ func end_drag():
 		var tween = create_tween().set_parallel(true)
 		tween.tween_property(self, "global_position", original_position, duration)
 
-func _on_Area_mouse_entered():
+# set this tile as being hovered over when the mouse enters its Area3D
+func _on_area_3d_mouse_entered():
 	mouse_over = true
 
-func _on_Area_mouse_exited():
+# set this tile as not being hovered over when the mouse leaves its Area3D
+func _on_area_3d_mouse_exited():
 	mouse_over = false
