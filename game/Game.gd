@@ -19,10 +19,20 @@ var tile_scene = preload('res://tile/Tile.tscn')
 # called when the node enters the scene tree for the first time
 func _ready():
 	randomize()
+	
 	setup_players()
+	
+	setup_board()
+
+func setup_board():
+	var scale = 0.004
+	board.scale = Vector3(scale, scale, scale)
 
 # figures out where to position the tile in the given player's hand
 func get_tile_position_in_hand(player_number, tile_number):
+	return Vector3(0, -1100, 0)
+	
+	# @todo this is not working right now
 	var x_offset = 0
 	var offset = 8
 	var multiplier = 3
@@ -286,7 +296,125 @@ func _input(event):
 	if not tile:
 		return
 	
-	tile.check_rotate(event)
+	check_tile_movement(event, tile)
+	check_rotate(event, tile)
+
+# check if we need to rotate
+# if so, do so
+func check_rotate(event, tile):
+	var keys_and_actions = [
+		{
+			'key': KEY_KP_9,
+			'rotations' : {
+				'y' : 180,
+				'z' : 90
+			}
+		},
+		{
+			'key': KEY_KP_7,
+			'rotations': {
+				'y' : -180,
+				'z' : -90
+			}
+		},
+		{
+			'key': KEY_KP_8,
+			'rotations': {
+				'x': -180
+			}
+		},
+		{
+			'key': KEY_KP_2,
+			'rotations': {
+				'x': 180
+			}
+		},
+		{
+			'key': KEY_KP_4,
+			'rotations': {
+				'y': -180
+			}
+		},
+		{
+			'key': KEY_KP_6,
+			'rotations': {
+				'y': 180
+			}
+		},
+		{
+			'key': KEY_KP_1,
+			'rotations': {
+				'y' : -180,
+				'z' : 90
+			}
+		},
+		{
+			'key': KEY_KP_3,
+			'rotations': {
+				'y' : 180,
+				'z' : -90
+			}
+		},
+		{
+			'key': KEY_MINUS,
+			'rotations': {
+				'z' : 90
+			}
+		},
+		{
+			'key': KEY_EQUAL,
+			'rotations': {
+				'z' : -90
+			}
+		},
+	]
+	for set in keys_and_actions:
+		if event is InputEventKey  \
+			and event.pressed \
+			and event.keycode == set.key:
+				tile.spin(set.rotations)
+				
+func check_tile_movement(event, tile):
+	# only process input if needed
+	if not tile.draggable:
+		return
+
+	# check if we need to stop dragging
+	var stopped = tile.being_dragged \
+		and event is InputEventMouseButton \
+		and not event.is_pressed()
+	if stopped:
+		print('stopping drag')
+		end_drag(tile)
+		return
+
+	# check if we need to start dragging
+	var started = event is InputEventMouseButton \
+		and event.is_pressed() \
+		and event.button_index == MOUSE_BUTTON_LEFT 
+	if started:
+		print('picked up')
+		tile.pick_up()
+		return
+
+	# check if we need to continue dragging
+	var continued = event is InputEventMouseMotion \
+					and tile.being_dragged
+	if continued:
+		tile.drag(event)
+		return
+
+func end_drag(tile):	
+	# stop allowing this to be dragged around
+	tile.being_dragged = false
+	
+	# check if this is a valid drop location
+	var dropboxes = tile.get_node('Area3D').get_overlapping_areas()
+	if dropboxes.size() > 0:
+		var dropbox = dropboxes[0].get_parent()
+		tile.place_in_box(dropbox)
+	else:
+		tile.revert_position()
 
 # gets the currently selected tile if there is one
 func get_selected_tile():

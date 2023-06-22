@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://tile/Tile.gd" id="1"]
 [ext_resource type="ArrayMesh" uid="uid://v76yf2oxey0s" path="res://tile/tile.obj" id="2_e0k6g"]
-[ext_resource type="PackedScene" uid="uid://mo8tu8onbfek" path="res://tile/arrow.glb" id="3_5a55g"]
+[ext_resource type="PackedScene" uid="uid://ihwmcvr85ywb" path="res://tile/arrow.glb" id="3_5a55g"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_5vqis"]
 size = Vector3(7.91399, 7.99106, 1)
