@@ -19,9 +19,11 @@ environment = SubResource("1")
 current = true
 
 [node name="DirectionalLight" type="DirectionalLight3D" parent="Camera"]
+process_mode = 1
+light_bake_mode = 0
 
 [node name="Board" parent="." instance=ExtResource("2")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.142285)
+transform = Transform3D(0.004, 0, 0, 0, 0.004, 0, 0, 0, 0.004, 0, 0, -0.142285)
 
 [node name="Player1Score" type="Label" parent="."]
 offset_left = 1.0

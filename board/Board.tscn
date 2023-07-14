@@ -9,24 +9,24 @@ script = ExtResource("2")
 [node name="0_0" parent="." instance=ExtResource("2_0s0a2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -430, 430, 0)
 
-[node name="0_1" parent="." instance=ExtResource("2_0s0a2")]
+[node name="1_0" parent="." instance=ExtResource("2_0s0a2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 430, 0)
 
-[node name="0_2" parent="." instance=ExtResource("2_0s0a2")]
+[node name="2_0" parent="." instance=ExtResource("2_0s0a2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 430, 430, 0)
 
-[node name="1_0" parent="." instance=ExtResource("2_0s0a2")]
+[node name="0_1" parent="." instance=ExtResource("2_0s0a2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -430, 0, 0)
 
 [node name="1_1" parent="." instance=ExtResource("2_0s0a2")]
 
-[node name="1_2" parent="." instance=ExtResource("2_0s0a2")]
+[node name="2_1" parent="." instance=ExtResource("2_0s0a2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 430, 0, 0)
 
-[node name="2_0" parent="." instance=ExtResource("2_0s0a2")]
+[node name="0_2" parent="." instance=ExtResource("2_0s0a2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -430, -430, 0)
 
-[node name="2_1" parent="." instance=ExtResource("2_0s0a2")]
+[node name="1_2" parent="." instance=ExtResource("2_0s0a2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -430, 0)
 
 [node name="2_2" parent="." instance=ExtResource("2_0s0a2")]

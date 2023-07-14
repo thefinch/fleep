@@ -20,40 +20,34 @@ var tile_scene = preload('res://tile/Tile.tscn')
 func _ready():
 	randomize()
 	
+	reset()
+
+func reset():
+	get_tree().paused = true
+	
+	board.setup_board()
 	setup_players()
 	
-	setup_board()
-
-func setup_board():
-	var scale = 0.004
-	board.scale = Vector3(scale, scale, scale)
+	get_tree().paused = false
 
 # figures out where to position the tile in the given player's hand
 func get_tile_position_in_hand(player_number, tile_number):
-	return Vector3(0, -1100, 0)
+	var y_offset_amount = 1200
+	var y_offset = -y_offset_amount if player_number == 1 else y_offset_amount
 	
-	# @todo this is not working right now
-	var x_offset = 0
-	var offset = 8
-	var multiplier = 3
-	match(tile_number):
-		0:
-			x_offset = -multiplier * offset
-		1:
-			x_offset = -offset
-		3:
-			x_offset = offset
-		4:
-			x_offset = multiplier * offset
-
-	var y_offset = -25
-	if player_number == 2:
-		y_offset = -y_offset
-
+	var x_offset = 600
+	var x_offsets = {
+		0: x_offset * -2,
+		1: x_offset * -1,
+		2: 0,
+		3: x_offset,
+		4: x_offset * 2
+	}
+	
 	return Vector3(
-		x_offset,
+		x_offsets[tile_number],
 		y_offset,
-		x_offset
+		0
 	)
 
 # creates a tile and adds it to the given player's hand
@@ -76,15 +70,31 @@ func add_tile(player_hand, player_number, tile_number):
 
 # resets and then fills up the player's hands
 func setup_players():
+	# reset player scores
+	set_player_score(1, 0)
+	set_player_score(2, 0)
+
 	# reset the players' hands
+	for tile in player1:
+		tile.queue_free()
+	for tile in player2:
+		tile.queue_free()
 	player1 = []
 	player2 = []
 
-	tiles_per_hand = 1
 	# create our tiles
+	tiles_per_hand = 5
 	for tile_number in range(0, tiles_per_hand):
 		add_tile(player1, 1, tile_number)
-#		add_tile(player2, 2, tile_number)
+		add_tile(player2, 2, tile_number)
+
+func set_player_score(player, score):
+	if player == 1:
+		player1Score = score
+		$Player1Score.text = 'You: ' + str(player1Score)
+	else:
+		player2Score = score
+		$Player2Score.text = 'Not You: ' + str(player2Score)
 
 # gets the board position pointed to by an arrow located at the given position
 func get_coordinate_from_arrow(arrow, position):
@@ -117,59 +127,40 @@ func get_coordinate_from_arrow(arrow, position):
 		'y': position['y'] + y
 	}
 	
-# @todo this is broken right now
-func flip(tiles_that_flipped):
+# flip all the tiles that tiles_that_flipped are pointing to, get the new list of 
+func flip(player, tiles_that_flipped):
 	var run_again = []
 	var tile_at_position
 	var check_position
 	var tile_at_check_position
-	var current_side
-	var new_side
 	for position in tiles_that_flipped:
 		# get the tile at this position
 		tile_at_position = board.get_tile_at_position(position['x'], position['y'])
-		# print('tile', tile_at_position, 'was placed at', $position)
+		prints('tile', tile_at_position, 'at', position, 'was placed or flipped')
+		prints('tile top', tile_at_position.top)
+		print('tile bottom', tile_at_position.bottom)
 
-		# flip each tile that it is pointing to
-		for arrow in tile_at_position['tile'][tile_at_position['side']]:
-			# get position of tile to flip
+		var matrix = tile_at_position.top if tile_at_position.current_side == 'top' else tile_at_position.bottom
+		for arrow in matrix:
 			check_position = get_coordinate_from_arrow(arrow, position)
-
+			print('arrow ', arrow, ' is pointing at ', check_position)
+			
 			# flip tile if needed
 			tile_at_check_position = board.get_tile_at_position(check_position['x'], check_position['y'])
-			if board.get_tile_at_position(position['x'], position['y']) != null:
-				# set which side we need to care about
-				current_side = tile_at_check_position.get_current_side()
-				new_side = 'bottom' if current_side == 'top' else 'top'
-				tile_at_check_position.set_current_side(new_side)
-
-				# flip the tile in the direction the arrow was pointing
-				for side in ['top', 'bottom']:
-					match arrow:
-						'UL', 'DR':
-							board[check_position['x']][check_position['y']]['tile'][side] = tile_scene.transpose(
-								board[check_position['x']][check_position['y']]['tile'][side],
-								'up-left'
-							)
-
-						'UR', 'DL':
-							board[check_position['x']][check_position['y']]['tile'][side] = tile_scene.transpose(
-								board[check_position['x']][check_position['y']]['tile'][side],
-								'down-left'
-							)
-
-						'L', 'R':
-							board[check_position['x']][check_position['y']]['tile'][side] = tile_scene.reflect(
-								board[check_position['x']][check_position['y']]['tile'][side],
-								'horizontal'
-							)
-
-						'U', 'D':
-							board[check_position['x']][check_position['y']]['tile'][side] = tile_scene.reflect(
-								board[check_position['x']][check_position['y']]['tile'][side],
-								'vertical'
-							)
-							
+			if tile_at_check_position != null:
+				print('there is a tile at that position', tile_at_check_position)
+				var map = {
+					'UL': tile_at_check_position.up_left,
+					'UR': tile_at_check_position.up_right,
+					'DL': tile_at_check_position.down_left,
+					'DR': tile_at_check_position.down_right,
+					'U': tile_at_check_position.up,
+					'D': tile_at_check_position.down,
+					'L': tile_at_check_position.left,
+					'R': tile_at_check_position.right,
+				}
+				map[arrow].call()
+			
 				# add to the list of board positions to flip if necessary
 				if not run_again.has(check_position):
 					# increase score
@@ -177,7 +168,17 @@ func flip(tiles_that_flipped):
 					
 					# add it to the list of tiles that have been flipped
 					run_again.append(check_position)
+					
+			print('')
 
+	# make sure all animations have completed before we continue
+	await get_tree().create_timer(1.0).timeout
+	
+	# update the player's score based on how many flips just happened
+	var new_score = player1Score if player == 1 else player2Score
+	new_score = new_score + flip_count
+	set_player_score(player, new_score)
+	
 	# run again if needed
 	if len(run_again) > 0:
 		# check for infinite flips
@@ -185,7 +186,8 @@ func flip(tiles_that_flipped):
 			print('probably going infinite')
 			return
 
-		flip(run_again)
+		flip_count = 0
+		flip(player, run_again)
 
 	return
 
@@ -225,17 +227,6 @@ func make_ai_move():
 		'tile': tile,
 		'side': 'top'
 	}
-	
-# increases the given player's score by the specified amount
-func add_to_player_score(player, new_points):
-	if player == 1:
-		var old_points = $Player1Score.text.to_int()
-		var points = old_points + new_points
-		$Player1Score.text = 'You: ' + points as String
-	else:
-		var old_points = $Player2Score.text.to_int()
-		var points = old_points + new_points
-		$Player2Score.text = 'Not You: ' + points as String
 
 func play():
 	# keep playing until the board is full
@@ -275,11 +266,7 @@ func play():
 
 		# do the flips
 		flip_count = 0
-		flip([where_to_play])
-		if player == 1:
-			player1Score += flip_count
-		else:
-			player2Score += flip_count
+		flip(player, [where_to_play])
 
 		if flip_count > 200:
 			print('infinite!')
@@ -292,88 +279,57 @@ func play():
 		open = board.get_empty_spots()
 
 func _input(event):
-	var tile = get_selected_tile()
-	if not tile:
+	# check if we need to reset the game
+	if event is InputEventKey  \
+		and event.pressed == false \
+		and event.keycode == KEY_R:
+			reset()
+			return
+
+	# select a tile if it has been clicked on
+	var clicked = event is InputEventMouseButton \
+		and event.is_pressed() \
+		and event.button_index == MOUSE_BUTTON_LEFT 
+	if clicked:
+		for tile in player1:
+			if tile.mouse_over:
+				tile.selected = true
+
+	# get the selected tile
+	var selected
+	for tile in player1:
+		if tile.selected:
+			selected = tile
+	
+	if not selected:
 		return
 	
-	check_tile_movement(event, tile)
-	check_rotate(event, tile)
+	# handle any input for the selected tile
+	check_tile_movement(event, selected)
+	check_rotate(event, selected)
 
 # check if we need to rotate
 # if so, do so
 func check_rotate(event, tile):
-	var keys_and_actions = [
-		{
-			'key': KEY_KP_9,
-			'rotations' : {
-				'y' : 180,
-				'z' : 90
-			}
-		},
-		{
-			'key': KEY_KP_7,
-			'rotations': {
-				'y' : -180,
-				'z' : -90
-			}
-		},
-		{
-			'key': KEY_KP_8,
-			'rotations': {
-				'x': -180
-			}
-		},
-		{
-			'key': KEY_KP_2,
-			'rotations': {
-				'x': 180
-			}
-		},
-		{
-			'key': KEY_KP_4,
-			'rotations': {
-				'y': -180
-			}
-		},
-		{
-			'key': KEY_KP_6,
-			'rotations': {
-				'y': 180
-			}
-		},
-		{
-			'key': KEY_KP_1,
-			'rotations': {
-				'y' : -180,
-				'z' : 90
-			}
-		},
-		{
-			'key': KEY_KP_3,
-			'rotations': {
-				'y' : 180,
-				'z' : -90
-			}
-		},
-		{
-			'key': KEY_MINUS,
-			'rotations': {
-				'z' : 90
-			}
-		},
-		{
-			'key': KEY_EQUAL,
-			'rotations': {
-				'z' : -90
-			}
-		},
-	]
-	for set in keys_and_actions:
+	var keys_and_actions = {
+		KEY_KP_9: tile.up_right,
+		KEY_KP_7: tile.up_left,
+		KEY_KP_8: tile.up,
+		KEY_KP_2: tile.down,
+		KEY_KP_4: tile.left,
+		KEY_KP_6: tile.right,
+		KEY_KP_1: tile.down_left,
+		KEY_KP_3: tile.down_right,
+		KEY_MINUS: tile.rotate_left,
+		KEY_EQUAL: tile.rotate_right
+	}
+	
+	for key in keys_and_actions:
 		if event is InputEventKey  \
 			and event.pressed \
-			and event.keycode == set.key:
-				tile.spin(set.rotations)
-				
+			and event.keycode == key:
+				keys_and_actions[key].call()
+
 func check_tile_movement(event, tile):
 	# only process input if needed
 	if not tile.draggable:
@@ -385,6 +341,7 @@ func check_tile_movement(event, tile):
 		and not event.is_pressed()
 	if stopped:
 		print('stopping drag')
+		print('')
 		end_drag(tile)
 		return
 
@@ -404,19 +361,43 @@ func check_tile_movement(event, tile):
 		tile.drag(event)
 		return
 
-func end_drag(tile):	
+func end_drag(tile):
 	# stop allowing this to be dragged around
 	tile.being_dragged = false
+	tile.selected = false
 	
 	# check if this is a valid drop location
 	var dropboxes = tile.get_node('Area3D').get_overlapping_areas()
 	if dropboxes.size() > 0:
+		# put the tile in the box
 		var dropbox = dropboxes[0].get_parent()
-		tile.place_in_box(dropbox)
-	else:
-		tile.revert_position()
+		var box_name = dropbox.get_name()
+		var parts = box_name.split('_')
+		var x = parts[0].to_int()
+		var y = parts[1].to_int()
+		
+		# make sure there is not a tile there already
+		var tile_in_spot = board.get_tile_at_position(x, y)
+		if tile_in_spot:
+			tile.revert_position()
+			return
+
+		# update the board 
+		tile.place_at(dropbox.global_position)
+		board.set_tile_at_position(tile, x, y)
+		
+		# try to flip
+		flip_count = 0
+		flip(1, [{'x': x, 'y': y}])
+		
+		return
+	
+	tile.revert_position()
 
 # gets the currently selected tile if there is one
 func get_selected_tile():
-	var tile = player1[0]
-	return tile
+	for tile in player1:
+		if tile.mouse_over:
+			return tile
+	
+	return null
