@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://cghrrn4bwegl2"]
+[gd_scene load_steps=7 format=3 uid="uid://cghrrn4bwegl2"]
 
 [ext_resource type="Script" path="res://tile/Tile.gd" id="1"]
 [ext_resource type="ArrayMesh" uid="uid://v76yf2oxey0s" path="res://tile/tile.obj" id="2_e0k6g"]
@@ -6,6 +6,12 @@
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_5vqis"]
 size = Vector3(7.91399, 7.99106, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_v2d0k"]
+albedo_color = Color(0.678431, 0.85098, 0.956863, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_44whf"]
+albedo_color = Color(0.678431, 0.85098, 0.956863, 1)
 
 [node name="Spatial" type="Node3D"]
 script = ExtResource("1")
@@ -18,6 +24,7 @@ shape = SubResource("BoxShape3D_5vqis")
 
 [node name="Front" type="MeshInstance3D" parent="."]
 mesh = ExtResource("2_e0k6g")
+surface_material_override/0 = SubResource("StandardMaterial3D_v2d0k")
 
 [node name="UL" parent="Front" instance=ExtResource("3_5a55g")]
 transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, -130, 130, 20)
@@ -54,6 +61,7 @@ visible = false
 [node name="Back" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, -1, -8.74228e-08, 0, 8.74228e-08, -1, 0, 0, 0)
 mesh = ExtResource("2_e0k6g")
+surface_material_override/0 = SubResource("StandardMaterial3D_44whf")
 
 [node name="UL" parent="Back" instance=ExtResource("3_5a55g")]
 transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, -130, 130, 20)
