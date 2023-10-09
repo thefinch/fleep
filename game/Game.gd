@@ -22,6 +22,7 @@ func _ready():
 	
 	reset()
 
+# sets up the board and the players to be able to start the game
 func reset():
 	get_tree().paused = true
 	
@@ -133,22 +134,27 @@ func flip(player, tiles_that_flipped):
 	var tile_at_position
 	var check_position
 	var tile_at_check_position
+	var flips = 0
+	var tween
+	var duration = 0.3
+	var original_z
+	
+	# prevent some infinite scenarios by occasionally reversing the array
+	if randf() > 0.5:
+		tiles_that_flipped.reverse()
+		
 	for position in tiles_that_flipped:
 		# get the tile at this position
 		tile_at_position = board.get_tile_at_position(position['x'], position['y'])
-		prints('tile', tile_at_position, 'at', position, 'was placed or flipped')
-		prints('tile top', tile_at_position.top)
-		print('tile bottom', tile_at_position.bottom)
 
+		# figure out which side we're looking at
 		var matrix = tile_at_position.top if tile_at_position.current_side == 'top' else tile_at_position.bottom
 		for arrow in matrix:
-			check_position = get_coordinate_from_arrow(arrow, position)
-			print('arrow ', arrow, ' is pointing at ', check_position)
-			
 			# flip tile if needed
+			check_position = get_coordinate_from_arrow(arrow, position)
 			tile_at_check_position = board.get_tile_at_position(check_position['x'], check_position['y'])
 			if tile_at_check_position != null:
-				print('there is a tile at that position', tile_at_check_position)
+				prints('arrow', arrow, 'from position', position, 'is pointing to tile with', 'top', tile_at_check_position.top, 'and bottom', tile_at_check_position.bottom, 'and current side', tile_at_check_position.current_side)
 				var map = {
 					'UL': tile_at_check_position.up_left,
 					'UR': tile_at_check_position.up_right,
@@ -159,24 +165,36 @@ func flip(player, tiles_that_flipped):
 					'L': tile_at_check_position.left,
 					'R': tile_at_check_position.right,
 				}
+				
+#				original_z = tile_at_check_position.global_position.z
+#				tween = create_tween()
+#				tween.tween_property(tile_at_check_position, "global_position:z", tile_at_check_position.global_position.z + 1, duration)
+#				await tween.finished
+
 				map[arrow].call()
+				
+				prints('tile after', 'top', tile_at_check_position.top, 'bottom', tile_at_check_position.bottom, 'current side', tile_at_check_position.current_side)
+
+#				tween = create_tween()
+#				tween.tween_property(tile_at_check_position, "global_position:z", original_z, duration)
+#				await tween.finished
 			
 				# add to the list of board positions to flip if necessary
 				if not run_again.has(check_position):
 					# increase score
-					flip_count += 1                  
+					flips += 1                  
 					
 					# add it to the list of tiles that have been flipped
 					run_again.append(check_position)
 					
-			print('')
+				print('')
 
 	# make sure all animations have completed before we continue
 	await get_tree().create_timer(1.0).timeout
 	
 	# update the player's score based on how many flips just happened
 	var new_score = player1Score if player == 1 else player2Score
-	new_score = new_score + flip_count
+	new_score = new_score + flips
 	set_player_score(player, new_score)
 	
 	# run again if needed
@@ -186,97 +204,60 @@ func flip(player, tiles_that_flipped):
 			print('probably going infinite')
 			return
 
-		flip_count = 0
-		flip(player, run_again)
+		flip_count += flips
+		await flip(player, run_again)
 
 	return
 
 func make_ai_move():
 	# get a tile from the opponent
-	var tile = player2.pop()
+	var tile = player2.pop_back()
 
 	# get open spots
-	var open = []
-	for row_key in board.size:
-		for col_key in board.size:
-			if board[row_key][col_key] == null:
-				open.append({
-					'x': row_key,
-					'y': col_key
-				})
-
+	var open = board.get_empty_boxes()
+	
+	# if there's no open spaces, then it's game over
+	if len(open) == 0:
+		print('game over')
+		return
+	
 	# limit open spots to ones that should cause a flip
 	var playable_open = []
 	var check_position
+	var check_tile
 	for arrow in tile.top:
 		for position in open:
 			check_position = get_coordinate_from_arrow(arrow, position)
-			if board.has(check_position['x']) \
-				and board[check_position['x']].has(check_position['y']) \
-				and board[check_position['x']][check_position['y']] != null \
+			check_tile = board.get_tile_at_position(check_position['x'], check_position['y'])
+			if check_tile != null \
 				and not playable_open.has(position):
 				playable_open.append(position)
-
-	# if there's no spots to play that will cause a flip, default to all empty spots
+		
+	# if there's no spots to play that will cause a flip, default to any empty spot
 	if len(playable_open) == 0:
-		open = playable_open
+		playable_open = open
+		
+	# make it look like the AI is actually thinking
+	await get_tree().create_timer(0.5).timeout
 
 	# get a random open spot and put the tile there
-	var where_to_play = open[randi() % len(open) - 1]
-	board[where_to_play['x']][where_to_play['y']] = {
-		'tile': tile,
-		'side': 'top'
-	}
-
-func play():
-	# keep playing until the board is full
-	var player = 1
-	var tile
-	var playable_open
-	var check_position
-	var where_to_play
-	var open = board.get_empty_spots()
-	while len(open) > 0:
-		# get a tile from the current player
-		tile = player1.pop() if player == 1 else player2.pop()
-
-		# limit open spots to ones that should cause a flip
-		playable_open = []
-		for arrow in tile.top:
-			for position in open:
-				check_position = get_coordinate_from_arrow(arrow, position)
-				if board.has(check_position['x']) \
-					and board[check_position['x']].has(check_position['y']) \
-					and board[check_position['x']][check_position['y']] != null \
-					and not playable_open.has(position):
-					playable_open.append(position)
-
-		# if there's no spots to play that will cause a flip, default to all empty spots
-		if len(playable_open) == 0:
-			open = playable_open
-
-		# get a random open spot and put the tile there
-		where_to_play = open[randi() % len(open) - 1]
-		board[where_to_play['x']][where_to_play['y']] = {
-			'tile': tile,
-			'side': 'top'
-		}
-
-		# print('board', $board);
-
-		# do the flips
-		flip_count = 0
-		flip(player, [where_to_play])
-
-		if flip_count > 200:
-			print('infinite!')
-			break
-
-		# switch which player will take a turn
-		player = 2 if player == 1 else 1
-		
-		# get the empty spots again
-		open = board.get_empty_spots()
+	var where_to_play = playable_open[randi() % len(playable_open) - 1]
+	var x = where_to_play['x']
+	var y = where_to_play['y']
+	var dropbox = board.get_box(x, y)
+	
+	# make it look like the AI is picking it up and moving it
+	var camera = get_viewport().get_camera_3d()
+	var screen_position = camera.unproject_position(tile.global_position)
+	tile.face_camera(screen_position, 7)
+	
+	var duration = 0.5
+	var tween = create_tween().set_parallel(true)
+	tween.tween_property(tile, "global_position", dropbox.global_position, duration)
+	await tween.finished
+	
+	# put the tile down to start flipping
+	place_tile(tile, dropbox, x, y, 2)
 
 func _input(event):
 	# check if we need to reset the game
@@ -284,6 +265,12 @@ func _input(event):
 		and event.pressed == false \
 		and event.keycode == KEY_R:
 			reset()
+			return
+
+	if event is InputEventKey  \
+		and event.pressed == false \
+		and event.keycode == KEY_A:
+			make_ai_move()
 			return
 
 	# select a tile if it has been clicked on
@@ -340,8 +327,6 @@ func check_tile_movement(event, tile):
 		and event is InputEventMouseButton \
 		and not event.is_pressed()
 	if stopped:
-		print('stopping drag')
-		print('')
 		end_drag(tile)
 		return
 
@@ -350,7 +335,6 @@ func check_tile_movement(event, tile):
 		and event.is_pressed() \
 		and event.button_index == MOUSE_BUTTON_LEFT 
 	if started:
-		print('picked up')
 		tile.pick_up()
 		return
 
@@ -360,6 +344,33 @@ func check_tile_movement(event, tile):
 	if continued:
 		tile.drag(event)
 		return
+
+func place_tile(tile, dropbox, x, y, player):
+	print('placing tile for player', player)
+	# stop the ability to place tiles
+	if player == 1:
+		make_player_tiles_unavailable()
+		
+	# update the board 
+	tile.place_at(dropbox.global_position)
+	board.set_tile_at_position(tile, x, y)
+	
+	# try to flip
+	flip_count = 0
+	await flip(player, [{'x': x, 'y': y}])
+	
+	# if this was the player's turn, not let the AI go
+	if player == 1:
+		await make_ai_move()
+		make_player_tiles_available()
+
+func make_player_tiles_available():
+	for tile in player1:
+		tile.draggable = true
+	
+func make_player_tiles_unavailable():
+	for tile in player1:
+		tile.draggable = false
 
 func end_drag(tile):
 	# stop allowing this to be dragged around
@@ -382,13 +393,8 @@ func end_drag(tile):
 			tile.revert_position()
 			return
 
-		# update the board 
-		tile.place_at(dropbox.global_position)
-		board.set_tile_at_position(tile, x, y)
-		
-		# try to flip
-		flip_count = 0
-		flip(1, [{'x': x, 'y': y}])
+		# play the game
+		place_tile(tile, dropbox, x, y, 1)
 		
 		return
 	

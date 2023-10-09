@@ -18,14 +18,72 @@ func _ready():
 	# create the tile sides
 	top = create_tile_side()
 	bottom = create_tile_side()
-#	top = ['UL', 'R']
-#	bottom = ['UL', 'R']
+	top = ['UL', 'R']
+	bottom = ['UL', 'R']
 	
 	# show the arrows based on what we made
 	show_arrows(top, 'Front')
 	show_arrows(bottom, 'Back')
 	
+	test()
+	
 	bottom = change_matrix(bottom, 'vertical')
+
+func test():
+	top = ["UL", "R"]
+	bottom = change_matrix(top, 'vertical')
+	
+	var movements = [
+		{
+			'func': self.down,
+			'action': 'down',
+			'expected': {
+				'top' : ['DL', 'R'],
+				'bottom' : ['UL', 'R'],
+				'side': 'bottom'
+			},
+		},
+		{
+			'func': self.up_left,
+			'action': 'up_left',
+			'expected': {
+				'top' : ['DL', 'U'],
+				'bottom' : ['DR', 'U'],
+				'side': 'top'
+			},
+		}
+	]
+	for movement in movements:
+		prints('top before', top)
+		prints('bottom before', bottom)
+		prints('current side before', current_side)
+		prints('action will be', movement['action'])
+		movement['func'].call()
+		prints('top after', top, 'should be', movement['expected']['top'])
+		prints('bottom after', bottom, 'should be', movement['expected']['bottom'])
+		prints('current side is', current_side, 'and should be', movement['expected']['side'])
+		print('')
+	
+#	down()
+#	print(top, bottom, current_side)
+#	up_left()
+#	print(top, bottom, current_side)
+#	left()
+#	print(top, bottom, current_side)
+#	rotate_left()
+#	print(top, bottom, current_side)
+#	down_right()
+#	print(top, bottom, current_side)
+#	up()
+#	print(top, bottom, current_side)
+#	right()
+#	print(top, bottom, current_side)
+#	up_right()
+#	print(top, bottom, current_side)
+#	down_left()
+#	print(top, bottom, current_side)
+#	rotate_right()
+#	print(top, bottom, current_side)
 
 # shows all visible arrows on the given side
 func show_arrows(directions, side):
@@ -78,26 +136,19 @@ func get_current_side():
 	return current_side
 
 # spin the tile in 3D and rotate the matrixes appropriately
-func spin(list):	
-	# get the reverse to apply to the bottom
-	var reverse = {}
-	for axis in list:
-		reverse[axis] = -list[axis]
-
-	print('list of moves', list)
-	prints('list of moves reverse', reverse)
-	print('top before', top)
-	print('bottom before', bottom)
-
+func spin(list):
+	# rotate the matrices
 	top = rotate_matrix(top, list)
 	bottom = rotate_matrix(bottom, list)
-
-	print('top after', top)
-	print('bottom after', bottom)
-	print('')
 	
 	# spin the object
 	rotate_tile(list)
+	
+	# update the side
+	for axis in list:
+		if axis == 'y' or axis == 'x':
+			current_side = 'top' if current_side == 'bottom' else 'bottom'
+			break
 
 # rotates a tile a certain amount of degrees on the given axis
 func rotate_tile(list):
@@ -118,14 +169,12 @@ func rotate_tile(list):
 	var start_rotation
 	var degrees
 	for axis in list:
-		degrees = list[axis]
-		
 		# flip rotations if needed
 		if axis == 'x' or axis == 'y':
 			flip_factor = flip_factor * -1
-			current_side = 'top' if current_side == 'bottom' else 'bottom'
 		
 		# figure out how much to rotate and how long the rotation should last
+		degrees = list[axis]
 		match axis:
 			'x':
 				start_rotation = self.rotation.x
@@ -139,10 +188,8 @@ func rotate_tile(list):
 		tween.tween_property(self, "rotation:" + axis, radians, duration)
 
 	# allow rotation after this one is done
-	await(tween.finished)
+	await tween.finished
 	can_rotate = true
-	
-	print('current side', current_side)
 
 func rotate_matrix(matrix, list):
 	var degrees
@@ -153,15 +200,13 @@ func rotate_matrix(matrix, list):
 
 		if axis == 'z':
 			if degrees == -90:
-				matrix = change_matrix(matrix, 'right')
-			elif degrees == 90:
 				matrix = change_matrix(matrix, 'left')
+			elif degrees == 90:
+				matrix = change_matrix(matrix, 'right')
 		elif axis == 'y':
 			matrix = change_matrix(matrix, 'horizontal')
 		elif axis == 'x':
 			matrix = change_matrix(matrix, 'vertical')
-
-		prints('after rotation', axis, degrees, matrix)
 		
 	return matrix
 
@@ -195,12 +240,12 @@ func change_matrix(arrows, change):
 		},
 		'right': {
 			'UL': 'UR',
-			'U': 'R',
 			'UR': 'DR',
-			'R': 'D',
 			'DR': 'DL',
-			'D': 'L',
 			'DL': 'UL',
+			'R': 'D',
+			'U': 'R',
+			'D': 'L',
 			'L': 'U',
 		},
 		'down-left': {
@@ -260,17 +305,6 @@ func turn(arrows, direction):
 		)
 
 	return new_arrows
-
-func flip_diagonally(mat):
-	var n = 3
-	var tmp
-	for i in range(0, 3):
-		for j in range(0, 3 - i):
-			tmp = mat[i][j]
-			mat[i][j] = mat[(n - 1) - j][(n - 1) - i]
-			mat[(n - 1) - j][(n - 1) - i] = tmp
-			
-	return mat
 	
 # begin dragging the tile
 func pick_up():
@@ -318,18 +352,18 @@ func face_camera(origin, distance_from_camera):
 	var to = from + camera.project_ray_normal(origin) * distance_from_camera
 	global_transform.origin = to
 
-# spins this tile diagonally up and right
-func up_right():
-	spin({
-		'y' : 180,
-		'z' : 90
-	})
-
 # spins this tile diagonally up and left
 func up_left():
 	spin({
 		'y' : -180,
 		'z' : -90
+	})
+
+# spins this tile diagonally up and right
+func up_right():
+	spin({
+		'y' : 180,
+		'z' : 90
 	})
 
 # spins this tile up
@@ -352,14 +386,14 @@ func right():
 func down_left():
 	spin({
 		'y' : -180,
-		'z' : -90
+		'z' : 90
 	})
 
 # spins this tile diagonally down and right
 func down_right():
 	spin({
 		'y' : 180,
-		'z' : 90
+		'z' : -90
 	})
 
 # rotates this tile left

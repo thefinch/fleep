@@ -10,6 +10,16 @@ func _ready():
 
 # initializes the board state
 func setup_board():
+	# remove all tiles
+	if board_positions:
+		var tile
+		for y in range(0, size):
+			for x in range(0, size):
+				tile = get_tile_at_position(x, y)
+				if tile:
+					tile.queue_free()
+	
+	# build the array to hold all the tiles
 	board_positions = []
 	for row_key in range(0, size):
 		board_positions.append([])
@@ -26,16 +36,15 @@ func get_tile_at_position(x, y):
 		
 	return board_positions[x][y]
 
-# gets empty spots
-func get_empty_spots():
+# gets the boxes that don't currently have a tile in them
+func get_empty_boxes():
 	var spots = []
-	
-	for row_key in range(0, size - 1):
-		for column_key in range(0, size - 1):
-			if board_positions[row_key][column_key] == null:
+	for y in range(0, size):
+		for x in range(0, size):
+			if get_tile_at_position(x, y) == null:
 				spots.append({
-					'x': row_key,
-					'y': column_key
+					'x': x,
+					'y': y
 				})
 	
 	return spots
@@ -43,3 +52,7 @@ func get_empty_spots():
 # saves a tile at the given board position
 func set_tile_at_position(tile, x, y):
 	board_positions[x][y] = tile
+
+# gets the box at the given position
+func get_box(x, y):
+	return get_node(str(x) + '_' + str(y))
