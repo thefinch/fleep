@@ -183,7 +183,7 @@ func _input(event):
 	# only process input if needed
 	if not draggable or not mouse_over:
 		return
-		
+	
 	# check if we need to stop dragging
 	var stopped = being_dragged \
 		and event is InputEventMouseButton \
@@ -196,7 +196,7 @@ func _input(event):
 	# check if we need to start dragging
 	var started = event is InputEventMouseButton \
 		and event.is_pressed() \
-		and event.button_index == MOUSE_BUTTON_LEFT 
+		and event.button_index == MOUSE_BUTTON_LEFT
 	if started:
 		pick_up()
 		return
@@ -228,20 +228,20 @@ func _input(event):
 func pick_up():
 	original_position = self.global_position
 	being_dragged = true
+	print('picked up')
 	
-func drag(event):	
+func drag(event):
 	# @todo this part isn't working right now
 	# make the top face of the tile always look at the camera
 	var distance_from_camera = 7
 	var camera = get_viewport().get_camera_3d()
 	var from = camera.project_ray_origin(event.position)
 	var to = from + camera.project_ray_normal(event.position) * distance_from_camera
-	#global_transform.origin = to
+	self.global_transform.origin = to
 
 func end_drag():	
 	# stop allowing this to be dragged around
 	being_dragged = false
-	#translation.z = original_position.z
 	
 	# check if this is a valid drop location
 	var valid_drop_location = false

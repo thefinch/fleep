@@ -17,3 +17,10 @@ func _on_Area_body_exited(body):
 
 func _on_Area_body_shape_exited(body_rid, body, body_shape_index, local_shape_index):
 	print('tile left 2', board_position)
+
+
+func _on_area_area_entered(area):
+	print('area entered')
+
+func _on_area_area_exited(area):
+	print('area left')
